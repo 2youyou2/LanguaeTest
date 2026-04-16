@@ -1,0 +1,24 @@
+{
+  "name": "languaetest",
+  "uuid": "77800add-3aa2-42a5-a403-861424b0829b",
+  "creator": {
+    "version": "3.8.1"
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "capture-refs:raw": "node scripts/capture_texteditor_refs.js",
+    "capture-refs:crop": "node scripts/crop_reference_images.js",
+    "capture-refs": "node scripts/capture_texteditor_refs.js && node scripts/crop_reference_images.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "playwright": "^1.49.1",
+    "pngjs": "^7.0.0"
+  }
+}

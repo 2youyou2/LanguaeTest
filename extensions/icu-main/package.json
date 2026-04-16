@@ -1,0 +1,22 @@
+{
+  "name": "icu-main",
+  "package_version": 2,
+  "version": "1.0.0",
+  "description": "Run ICU line and grapheme segmentation in the Cocos Creator main process.",
+  "author": "Codex",
+  "main": "./main.js",
+  "contributions": {
+    "messages": {
+      "get-break-points": {
+        "public": true,
+        "description": "Collect ICU line break and grapheme break points for a piece of text.",
+        "methods": [
+          "getBreakPoints"
+        ]
+      }
+    }
+  },
+  "dependencies": {
+    "icu": "^2.2.0"
+  }
+}
