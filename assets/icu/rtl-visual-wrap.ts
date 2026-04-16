@@ -2,6 +2,27 @@ import { EDITOR, NATIVE } from "cc/env";
 
 export type WrapMeasureWidth = (segment: string) => number;
 
+function collectJsFallbackBreakData(text: string) {
+    const graphemeBreaks: number[] = [];
+    let offset = 0;
+
+    for (const segment of Array.from(text)) {
+        offset += segment.length;
+        graphemeBreaks.push(offset);
+    }
+
+    const lineBreaks: number[] = [];
+    const wordLikeSegments = text.match(/\S+\s*|\s+/gu) ?? Array.from(text);
+    offset = 0;
+
+    for (const segment of wordLikeSegments) {
+        offset += segment.length;
+        lineBreaks.push(offset);
+    }
+
+    return { lineBreaks, graphemeBreaks };
+}
+
 /**
  * 在 Cocos Creator 编辑器环境中，我们优先通过插件消息（icu-main）在主进程中获取 ICU 数据，
  * 这样可以避免在场景 Webview 环境中因复杂的 WASM 初始化路径而失败。
@@ -33,8 +54,7 @@ async function collectIcuBreakData(text: string, locale: string | null) {
         }
     }
 
-    debugger
-    console.error('collectIcuBreakData not support on platform')
+    return collectJsFallbackBreakData(text)
 }
 
 
@@ -49,6 +69,84 @@ function isLTRText(text: string) {
     return !!text.match(LTR_CHAR_REG);
 }
 
+function normalizeBreakPoints(breaks: number[] | undefined, textLength: number) {
+    const points = Array.isArray(breaks)
+        ? breaks
+            .filter((point) => Number.isInteger(point) && point >= 0 && point <= textLength)
+            .sort((a, b) => a - b)
+        : [];
+
+    if (points[0] !== 0) {
+        points.unshift(0);
+    }
+
+    if (points[points.length - 1] !== textLength) {
+        points.push(textLength);
+    }
+
+    return points.filter((point, index) => index === 0 || point !== points[index - 1]);
+}
+
+function splitOversizedWords(
+    text: string,
+    lineBreaks: number[],
+    graphemeBreaks: number[],
+    maxWidth: number,
+    measureWidth: WrapMeasureWidth,
+) {
+    const words: string[] = [];
+
+    for (let i = 0; i < lineBreaks.length - 1; i++) {
+        const start = lineBreaks[i];
+        const end = lineBreaks[i + 1];
+        const segment = text.substring(start, end);
+
+        if (!segment) {
+            continue;
+        }
+
+        if (measureWidth(segment) <= maxWidth) {
+            words.push(segment);
+            continue;
+        }
+
+        const localBreaks = graphemeBreaks.filter((point) => point > start && point < end);
+        const chunkBreaks = [start, ...localBreaks, end];
+        let chunk = '';
+        let lastPoint = start;
+
+        for (let j = 1; j < chunkBreaks.length; j++) {
+            const nextPoint = chunkBreaks[j];
+            const piece = text.substring(lastPoint, nextPoint);
+            lastPoint = nextPoint;
+
+            if (!piece) {
+                continue;
+            }
+
+            const candidate = chunk + piece;
+            if (!chunk || measureWidth(candidate) <= maxWidth) {
+                chunk = candidate;
+                continue;
+            }
+
+            words.push(chunk);
+            chunk = piece;
+
+            if (measureWidth(chunk) > maxWidth) {
+                words.push(chunk);
+                chunk = '';
+            }
+        }
+
+        if (chunk) {
+            words.push(chunk);
+        }
+    }
+
+    return words;
+}
+
 
 /**
  * 核心折行逻辑：结合 ICU 断点和渲染引擎测量的 RTL 折行算法
@@ -59,7 +157,7 @@ function isLTRText(text: string) {
 export async function wrapRtlTextWithIcu(
     text: string,
     {
-        locale = 'ar',
+        locale = null,
         maxWidth,
         measureWidth,
     }
@@ -76,7 +174,9 @@ export async function wrapRtlTextWithIcu(
         throw new TypeError('measureWidth 必须是一个函数');
     }
 
-    const { lineBreaks, graphemeBreaks } = await collectIcuBreakData(text, locale);
+    const breakData = await collectIcuBreakData(text, locale);
+    const lineBreaks = normalizeBreakPoints(breakData?.lineBreaks, text.length);
+    const graphemeBreaks = normalizeBreakPoints(breakData?.graphemeBreaks, text.length);
 
     // lineBreaks:
     //   语言学上合法的断行位置。
@@ -100,10 +200,7 @@ export async function wrapRtlTextWithIcu(
         return text.trim()
     }
 
-    let words = []
-    for (let i = 0; i < lineBreaks.length - 1; i++) {
-        words.push(text.substring(lineBreaks[i], lineBreaks[i + 1]));
-    }
+    const words = splitOversizedWords(text, lineBreaks, graphemeBreaks, maxWidth, measureWidth)
 
     // debugger
 
@@ -214,6 +311,19 @@ export async function wrapRtlTextToString(
     text: string,
     options
 ) {
-    const lines = await wrapRtlTextWithIcu(text, options);
-    return lines.join('\n');
+    if (!text) {
+        return '';
+    }
+
+    const paragraphs = text.replace(/\r\n/g, '\n').split('\n');
+    const wrappedParagraphs = await Promise.all(paragraphs.map(async (paragraph) => {
+        if (!paragraph) {
+            return '';
+        }
+
+        const lines = await wrapRtlTextWithIcu(paragraph, options);
+        return lines.join('\n');
+    }));
+
+    return wrappedParagraphs.join('\n');
 }

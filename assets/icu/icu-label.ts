@@ -1,6 +1,6 @@
 import { _decorator, Component, game, Label, UITransform } from "cc";
 import { wrapRtlTextToString } from "./rtl-visual-wrap";
-import { EDITOR, NATIVE } from "cc/env";
+import { EDITOR } from "cc/env";
 import { view } from "cc";
 
 
@@ -118,14 +118,15 @@ export class ICULabel extends Component {
     dirty = true
 
     protected onEnable(): void {
-        this.updateLabel()
+        void this.updateLabel()
+    }
+
+    async setIcuText(text: string) {
+        this.str = text
+        await this.updateLabel()
     }
 
     async updateLabel() {
-        if (!EDITOR && !NATIVE) {
-            return
-        }
-
         const updateVersion = ++this._updateVersion
         try {
             const label = this.getComponent(Label);
@@ -140,6 +141,7 @@ export class ICULabel extends Component {
 
             this.uiTransform = t
             this.currentWidth = t.width
+            label.enableWrapText = false
 
             const fontDesc = getLabelFontDescriptor(label);
             const str = await wrapRtlTextToString(this._str, {
@@ -169,7 +171,7 @@ export class ICULabel extends Component {
         }
 
         if (this.uiTransform.width !== this.currentWidth || this.dirty) {
-            this.updateLabel()
+            void this.updateLabel()
         }
     }
 }

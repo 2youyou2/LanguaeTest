@@ -1,4 +1,5 @@
 import { _decorator, Color, Component, Graphics, Label, Node, Size, Sprite, SpriteFrame, Texture2D, UITransform, Vec3, Widget, resources } from 'cc';
+import { ICULabel } from './icu/icu-label';
 const { ccclass, property } = _decorator;
 
 type CaseItem = {
@@ -15,13 +16,10 @@ export class LanguageSortValidation extends Component {
     @property({ tooltip: '每条测试用例展示时长（秒）' })
     public intervalSeconds = 2;
 
-    @property({ tooltip: '启用同一文本的 Overflow 对照（CLAMP->SHRINK->RESIZE_HEIGHT）' })
-    public enableOverflowComparison = true;
-
-    @property({ tooltip: '是否强制开启自动换行（建议开启，便于观察换行差异）' })
+    @property({ tooltip: '启用 ICU 预换行：关闭 cc.Label 自动换行，仅保留 overflow 的裁剪/缩放/高度适配。' })
     public forceWrapText = true;
 
-    @property({ tooltip: '是否在控制台打印切换日志（用例 + 模式 + 文本长度）' })
+    @property({ tooltip: '是否在控制台打印切换日志（用例 + 文本长度）' })
     public enableDebugLog = true;
 
     @property({ tooltip: '强制使用测试尺寸（避免原 Label 太窄导致误判）' })
@@ -64,19 +62,15 @@ export class LanguageSortValidation extends Component {
     public verboseReferenceLog = true;
 
     private _currentIndex = 0;
-    private _overflowIndex = 0;
     private _baseSize: Size | null = null;
     private _baseFontSize = 0;
     private _baseLineHeight = 0;
     private _referenceFrameByCase: Array<SpriteFrame | null> = [];
-
-    private readonly _overflowModes: number[] = [
-        Label.Overflow.CLAMP,
-        Label.Overflow.SHRINK,
-        Label.Overflow.RESIZE_HEIGHT,
-    ];
-
-    private readonly _overflowModeNames = ['CLAMP', 'SHRINK', 'RESIZE_HEIGHT'];
+    private _icuLabel: ICULabel | null = null;
+    private _pauseButtonNode: Node | null = null;
+    private _pauseButtonGraphics: Graphics | null = null;
+    private _pauseButtonLabel: Label | null = null;
+    private _isPaused = false;
 
     private readonly _cases: CaseItem[] = [
         // 单语言验证
@@ -157,6 +151,8 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         this._captureBaseSize();
         this._ensureTestAreaSize();
         this._applyDebugLayout();
+        this._ensureIcuLabel();
+        this._ensurePauseButton();
         this._ensureReferenceSpriteNode();
         this._tryAutoLoadReferenceFrames();
         this.scheduleOnce(() => {
@@ -166,11 +162,21 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
             }
         }, 1);
         this._showCurrentCase();
-        this.schedule(this._showNextCase, this.intervalSeconds);
+        this._restartAutoPlay();
     }
 
     protected onDisable(): void {
         this.unschedule(this._showNextCase);
+        if (this._pauseButtonNode) {
+            this._pauseButtonNode.active = false;
+        }
+    }
+
+    protected onDestroy(): void {
+        if (this._pauseButtonNode?.isValid) {
+            this._pauseButtonNode.off(Node.EventType.TOUCH_END, this._onPauseButtonPressed, this);
+            this._pauseButtonNode.destroy();
+        }
     }
 
     private _showNextCase = (): void => {
@@ -178,15 +184,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
             return;
         }
 
-        if (this.enableOverflowComparison) {
-            this._overflowIndex = (this._overflowIndex + 1) % this._overflowModes.length;
-            if (this._overflowIndex === 0) {
-                this._currentIndex = (this._currentIndex + 1) % this._cases.length;
-            }
-        } else {
-            this._currentIndex = (this._currentIndex + 1) % this._cases.length;
-        }
-
+        this._currentIndex = (this._currentIndex + 1) % this._cases.length;
         this._showCurrentCase();
     };
 
@@ -196,16 +194,27 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
             return;
         }
 
-        if (this.enableOverflowComparison) {
-            this._applyOverflowMode(label, this._overflowIndex);
-        }
+        this._prepareLabelForDisplay(label);
 
         const item = this._cases[this._currentIndex];
         const indexText = `${this._currentIndex + 1}/${this._cases.length}`;
-        const overflowText = this.enableOverflowComparison
-            ? ` | Overflow=${this._overflowModeNames[this._overflowIndex]}`
-            : '';
-        label.string = `[${indexText}] ${item.title}${overflowText}\n${item.text}`;
+        const displayText = `[${indexText}] ${item.title}\n${item.text}`;
+
+        if (this.forceWrapText) {
+            const icuLabel = this._ensureIcuLabel(label);
+            if (icuLabel) {
+                icuLabel.enabled = true;
+                void icuLabel.setIcuText(displayText);
+            } else {
+                label.string = displayText;
+            }
+        } else {
+            if (this._icuLabel) {
+                this._icuLabel.enabled = false;
+            }
+            label.string = displayText;
+        }
+
         this._updateDebugBorder(label);
         this._updateReferencePanel(item);
         this._logCurrentState(item);
@@ -223,9 +232,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         this._baseLineHeight = label.lineHeight;
     }
 
-    private _applyOverflowMode(label: Label, modeIndex: number): void {
-        const mode = this._overflowModes[modeIndex];
-
+    private _prepareLabelForDisplay(label: Label): void {
         // 关键：先恢复基础字号/行高，避免 SHRINK 后续把字号“遗留”为超小值。
         if (this._baseFontSize > 0) {
             label.fontSize = this._baseFontSize;
@@ -233,13 +240,11 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         if (this._baseLineHeight > 0) {
             label.lineHeight = this._baseLineHeight;
         }
-        if (this.forceWrapText) {
-            label.enableWrapText = true;
-        }
+        label.enableWrapText = !this.forceWrapText;
 
-        label.overflow = mode;
+        label.overflow = Label.Overflow.RESIZE_HEIGHT;
 
-        // 为了可比性，CLAMP/SHRINK 时恢复基础尺寸，RESIZE_HEIGHT 时保持当前宽度即可。
+        // 每个样例只测一次 ICU 预换行，因此统一使用固定宽度并让高度自适应。
         const transform = label.node.getComponent(UITransform);
         if (!transform || !this._baseSize) {
             return;
@@ -247,13 +252,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
 
         const width = this.useTestAreaSize ? this.testAreaWidth : this._baseSize.width;
         const height = this.useTestAreaSize ? this.testAreaHeight : this._baseSize.height;
-
-        if (mode === Label.Overflow.CLAMP || mode === Label.Overflow.SHRINK) {
-            transform.setContentSize(width, height);
-        } else if (mode === Label.Overflow.RESIZE_HEIGHT) {
-            // 先回到基础高度再给引擎自适应，避免历史高度残留影响观测。
-            transform.setContentSize(width, height);
-        }
+        transform.setContentSize(width, height);
     }
 
     private _logCurrentState(item: CaseItem): void {
@@ -261,16 +260,13 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
             return;
         }
 
-        const modeName = this.enableOverflowComparison
-            ? this._overflowModeNames[this._overflowIndex]
-            : 'NONE';
         const label = this.targetLabel ?? this.getComponent(Label);
         const transform = label?.node.getComponent(UITransform);
         const sizeText = transform
             ? `${Math.round(transform.contentSize.width)}x${Math.round(transform.contentSize.height)}`
             : 'n/a';
         console.info(
-            `[LanguageSortValidation] case="${item.title}" mode=${modeName} length=${item.text.length} size=${sizeText}`,
+            `[LanguageSortValidation] case="${item.title}" length=${item.text.length} size=${sizeText}`,
         );
     }
 
@@ -286,6 +282,143 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         }
 
         transform.setContentSize(this.testAreaWidth, this.testAreaHeight);
+    }
+
+    private _ensureIcuLabel(label?: Label | null): ICULabel | null {
+        const hostLabel = label ?? this.targetLabel ?? this.getComponent(Label);
+        if (!hostLabel) {
+            return null;
+        }
+
+        if (this._icuLabel?.node === hostLabel.node) {
+            return this._icuLabel;
+        }
+
+        this._icuLabel = hostLabel.node.getComponent(ICULabel) ?? hostLabel.node.addComponent(ICULabel);
+        return this._icuLabel;
+    }
+
+    private _ensurePauseButton(): void {
+        const hostLabel = this.targetLabel ?? this.getComponent(Label);
+        const hostParent = hostLabel?.node.parent ?? this.node.parent;
+        if (!hostParent) {
+            return;
+        }
+
+        if (!this._pauseButtonNode || !this._pauseButtonNode.isValid) {
+            const buttonNode = new Node('PauseButton');
+            buttonNode.parent = hostParent;
+            buttonNode.layer = hostParent.layer;
+
+            const transform = buttonNode.addComponent(UITransform);
+            transform.setContentSize(108, 40);
+
+            const widget = buttonNode.addComponent(Widget);
+            widget.isAlignTop = true;
+            widget.isAlignRight = true;
+            widget.top = 20;
+            widget.right = 20;
+            widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
+            buttonNode.on(Node.EventType.TOUCH_END, this._onPauseButtonPressed, this);
+
+            this._pauseButtonNode = buttonNode;
+        }
+
+        const buttonNode = this._pauseButtonNode;
+        const buttonTransform = buttonNode.getComponent(UITransform) ?? buttonNode.addComponent(UITransform);
+        buttonTransform.setContentSize(108, 40);
+
+        this._pauseButtonGraphics = buttonNode.getComponent(Graphics) ?? buttonNode.addComponent(Graphics);
+
+        const legacyRootLabel = buttonNode.getComponent(Label);
+        if (legacyRootLabel) {
+            legacyRootLabel.enabled = false;
+        }
+
+        let textNode = buttonNode.getChildByName('PauseButtonText');
+        if (!textNode) {
+            textNode = new Node('PauseButtonText');
+            textNode.parent = buttonNode;
+        }
+        textNode.layer = buttonNode.layer;
+
+        const textTransform = textNode.getComponent(UITransform) ?? textNode.addComponent(UITransform);
+        textTransform.setContentSize(buttonTransform.contentSize.width, buttonTransform.contentSize.height);
+
+        const textWidget = textNode.getComponent(Widget) ?? textNode.addComponent(Widget);
+        textWidget.isAlignLeft = true;
+        textWidget.isAlignRight = true;
+        textWidget.isAlignTop = true;
+        textWidget.isAlignBottom = true;
+        textWidget.left = 0;
+        textWidget.right = 0;
+        textWidget.top = 0;
+        textWidget.bottom = 0;
+        textWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
+        const label = textNode.getComponent(Label) ?? textNode.addComponent(Label);
+        label.useSystemFont = true;
+        label.fontFamily = 'Arial';
+        label.string = '暂停';
+        label.fontSize = 20;
+        label.lineHeight = 24;
+        label.enableWrapText = false;
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+        label.overflow = Label.Overflow.SHRINK;
+        this._pauseButtonLabel = label;
+
+        this._pauseButtonNode.active = true;
+        this._pauseButtonNode.getComponent(Widget)?.updateAlignment();
+        textNode.getComponent(Widget)?.updateAlignment();
+        this._refreshPauseButton();
+    }
+
+    private _onPauseButtonPressed(): void {
+        this._isPaused = !this._isPaused;
+        this._restartAutoPlay();
+        this._refreshPauseButton();
+    }
+
+    private _restartAutoPlay(): void {
+        this.unschedule(this._showNextCase);
+        if (!this._isPaused) {
+            this.schedule(this._showNextCase, this.intervalSeconds);
+        }
+    }
+
+    private _refreshPauseButton(): void {
+        if (this._pauseButtonLabel) {
+            this._pauseButtonLabel.string = this._isPaused ? '继续' : '暂停';
+            this._pauseButtonLabel.color = new Color(255, 255, 255, 255);
+        }
+
+        const graphics = this._pauseButtonGraphics;
+        const node = this._pauseButtonNode;
+        if (!graphics || !node) {
+            return;
+        }
+
+        const transform = node.getComponent(UITransform);
+        if (!transform) {
+            return;
+        }
+
+        const width = transform.contentSize.width;
+        const height = transform.contentSize.height;
+        const startX = -width * transform.anchorX;
+        const startY = -height * transform.anchorY;
+
+        graphics.clear();
+        graphics.fillColor = this._isPaused
+            ? new Color(46, 125, 50, 220)
+            : new Color(33, 33, 33, 220);
+        graphics.strokeColor = new Color(255, 255, 255, 180);
+        graphics.lineWidth = 2;
+        graphics.roundRect(startX, startY, width, height, 10);
+        graphics.fill();
+        graphics.stroke();
     }
 
     private _updateReferencePanel(item: CaseItem): void {
@@ -526,4 +659,3 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         graphics.stroke();
     }
 }
-

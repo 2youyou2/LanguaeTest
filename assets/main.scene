@@ -467,7 +467,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 42.255859375,
+      "width": 42.23805732075394,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -500,12 +500,12 @@
     "_string": "label",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 20,
+    "_actualFontSize": 21.13888888888889,
     "_fontSize": 20,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
-    "_overflow": 0,
-    "_enableWrapText": true,
+    "_overflow": 1,
+    "_enableWrapText": false,
     "_font": null,
     "_isSystemFontUsed": true,
     "_spacingX": 0,
@@ -530,11 +530,10 @@
       "__id__": 12
     },
     "intervalSeconds": 2,
-    "enableOverflowComparison": true,
     "forceWrapText": true,
     "enableDebugLog": true,
     "useTestAreaSize": true,
-    "testAreaWidth": 640,
+    "testAreaWidth": 340,
     "testAreaHeight": 260,
     "debugAutoCenterLabel": false,
     "debugDisableWidgetWhenCentering": true,
@@ -684,7 +683,7 @@
     "_string": "label",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 20,
+    "_actualFontSize": 21.13888888888889,
     "_fontSize": 20,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -760,7 +759,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 42.255859375,
+      "width": 42.23805732075394,
       "height": 50.4
     },
     "_anchorPoint": {
