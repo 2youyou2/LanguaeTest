@@ -127,7 +127,9 @@ export class ICULabel extends Component {
     }
 
     async updateLabel() {
-        const updateVersion = ++this._updateVersion
+        this.dirty = false
+
+        // const updateVersion = ++this._updateVersion
         try {
             const label = this.getComponent(Label);
             if (!label) {
@@ -149,9 +151,9 @@ export class ICULabel extends Component {
                 measureWidth: (s) => safeMeasureText(s, fontDesc)
             });
 
-            if (updateVersion !== this._updateVersion) {
-                return;
-            }
+            // if (updateVersion !== this._updateVersion) {
+            //     return;
+            // }
 
             label.string = str
         } catch (error) {
@@ -162,7 +164,6 @@ export class ICULabel extends Component {
             cce.Engine.repaintInEditMode()
         }
 
-        this.dirty = false
     }
 
     update() {
