@@ -9,6 +9,39 @@ type CaseItem = {
 };
 
 const CUSTOM_CASES: CaseItem[] = [
+    
+    { text: '车道巡航临时退出，请注意控制方向' },
+    { text: 'حافظ على التحكم في التوجيه. التحكم في ثبات السرعة في الحارة معطل مؤقتًا' },
+    { text: 'Lane Cruise temporarily disengaged. Please take control of the steering'},
+    { text: 
+`
+Контролируйте руль.  Круиз-контроль с удержанием полосы временно отключен
+`},
+
+    { text: 
+`
+O assistente de permanência em faixa foi temporariamente desativado. Controle a direção do veículo.
+`},
+    { text: 'Controle la dirección. Control de crucero desactivado.' },
+    { text: 'Veuillez surveiller la direction. Régulateur de voie temporairement désactivé' },
+    { text: 'Рөлді басқаруды қолда ұстаңыз. Жолақты бақылау круиз-басқаруы уақытша өшірулі' },
+    { text: 'Rul boshqaruvini saqlang. Yo‘l chiziqlarini kuzatish tizimi vaqtincha o‘chirildi' },
+    { text: 'Giữ kiểm soát tay lái. Chức năng Kiểm soát làn đường tạm thời tắt' },
+    { text: 'Lenkkontrolle beibehalten Spur-Geschwindigkeitsregler vorübergehend deaktiviert' },
+    { text: 'ระบบควบคุมเลนถูกยกเลิกชั่วคราว โปรดควบคุมพวงมาลัย' },
+    { text: 'Pertahankan kontrol kemudi. Kontrol Jelajah Jalur dinonaktifkan sementara' },
+    { text: 'Kekalkan kawalan stereng. Lane Cruise dinyahaktifkan sementara waktu' },
+    { text: 'Behoud de stuurcontrole. Rijstrookassistentie tijdelijk uitgeschakeld' },
+    { text: 'Håll kontroll över styrningen. Filcentreringen är tillfälligt inaktiverad' },
+    { text: 'Behold kontroll på styring. Filhastighetskontroll midlertidig deaktivert' },
+    { text: 'Oprethold kontrollen over styringen. Vognbaneassistent midlertidigt deaktiveret' },
+    { text: 'لطفاً کنترل فرمان را حفظ کنید کروز بین خطوط به‌طور موقت خارج شد' },
+    { text: 'Utrzymuj kontrolę nad układem kierowniczym. Asystent utrzymania pasa ruchu tymczasowo wyłączony' },
+    { text: 'Mantenha o controlo da direção. Controlo de Cruzeiro Inteligente temporariamente desativado' },
+    { text: 'Mantenga el control de la dirección. Control de crucero en carril temp. desactivado' },
+    { text: '車道巡航臨時退出，請注意控制方向' },
+
+
     { text: 'اضغط على زر SET- على الجانب الأيسر من عجلة القيادة. اضبط الحد الأقصى للسرعة على مثبت السرعة' },
     { text: 'המנעול החשמלי של אקדח הטעינה לא משתחרר, וניתן לשחררו ידנית דרך כבל בתא המטען' },
     { text: 'אנא עצור את הרכב לחלוטין לפני מעבר להילוך P' },
@@ -21,9 +54,13 @@ const CUSTOM_CASES: CaseItem[] = [
     { text: 'อุณหภูมิของกล้องสูงเกินไป ระบบควบคุมความเร็วอัตโนมัติไม่สามารถใช้งานได้ชั่วคราว' },
     { text: 'กรุณาเชื่อมต่อ กุญแจบลูทธใหม่ผ่านแอปในโทรศัพท์' },
     { text: 'กรุณาทําการเรียนรู้ด้วยตนเองของมอเตอร์' },
+
     { text: 'โหมดไดนาโมมิเตอร์เปิดใช้งานแล้ว' },
     { text: 'เปิดใช้งานฟังก์ชนติดตามกลับบ้าน' },
     { text: 'เรือเล็กควรออกจากฝั่ง' },
+
+
+    
 ];
 
 @ccclass('LanguageSortValidation')
@@ -99,80 +136,7 @@ export class LanguageSortValidation extends Component {
     private _nextButtonLabel: Label | null = null;
     private _isPaused = false;
 
-    private readonly _cases: CaseItem[] = CUSTOM_CASES; /*
-        // 单语言验证
-        { title: '中文-简体', text: '阿里 巴士 北京 成都 广州 杭州 南京 上海 深圳 天津 武汉 西安', reference: '参考: CLDR/Unicode collation zh-Hans' },
-        { title: '中文-繁體', text: '阿里 巴士 北京 成都 廣州 杭州 南京 上海 深圳 天津 武漢 西安', reference: '参考: CLDR/Unicode collation zh-Hant' },
-        { title: '英文', text: 'Apple Banana Cherry Date Grape Lemon Mango Orange Peach Zebra', reference: '参考: UCA + en locale' },
-        { title: '泰语', text: 'ก ข ฃ ค ฅ ฆ ง จ ฉ ช ซ ญ ด ต ถ ท น บ ป ผ พ ฟ ภ ม ย ร ล ว ศ ส ห อ ฮ', reference: '参考: UCA + th locale' },
-        { title: '阿拉伯语', text: 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي', reference: '参考: UCA + ar locale (RTL)' },
-        { title: '西班牙语', text: 'a árbol avión azul casa corazón niño ñandú sábado zapato', reference: '参考: UCA + es locale' },
-        { title: '日文', text: 'あいうえお かきくけこ さしすせそ たちつてと なにぬねの', reference: '参考: UCA + ja locale' },
-        { title: '韩文', text: '가 나 다 라 마 바 사 아 자 차 카 타 파 하', reference: '参考: UCA + ko locale' },
-        { title: '俄语', text: 'А Б В Г Д Е Ё Ж З И Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Э Ю Я', reference: '参考: UCA + ru locale' },
-        { title: '意大利语', text: 'amico auto città èlite famiglia giovane italiano zucchero', reference: '参考: UCA + it locale' },
-        { title: '法语', text: 'ami année école élève français garçon hôtel île zéro', reference: '参考: UCA + fr locale' },
-
-        // 混排验证
-        { title: '中英混排', text: '北京 Beijing 上海 Shanghai 广州 Guangzhou 深圳 Shenzhen' },
-        { title: '简繁混排', text: '重庆 重慶 广州 廣州 台北 臺北 软件 軟體 颜色 顏色' },
-        { title: '中日混排', text: '中文 漢字 かな カナ Tokyo 東京 Osaka 大阪' },
-        { title: '中韩混排', text: '中文 한국어 Seoul 首尔 釜山 Busan 汉城 서울' },
-        { title: '中俄混排', text: '北京 Москва 上海 Санкт-Петербург 哈尔滨 Владивосток' },
-        { title: '中西混排', text: '北京 Madrid 上海 Barcelona 深圳 Valencia 中文 español' },
-        { title: '中法混排', text: '北京 Paris 上海 Lyon 广州 Marseille 中文 français' },
-        { title: '中意混排', text: '北京 Roma 上海 Milano 广州 Napoli 中文 italiano' },
-        { title: '中泰混排', text: '北京 กรุงเทพ 上海 เชียงใหม่ 深圳 ภูเก็ต 中文 ไทย' },
-        { title: '中阿混排', text: '北京 دبي 上海 القاهرة 深圳 الرياض 中文 العربية' },
-        {
-            title: '多语混排-1（长文本+手动换行）',
-            text: `中文English混排测试：北京Beijing、上海Shanghai、广州Guangzhou、深圳Shenzhen、杭州Hangzhou。
-日本語テスト：東京Tokyo・大阪Osaka・京都Kyoto、かなカナ漢字ABC123。
-한국어 테스트: 서울Seoul 부산Busan 인천Incheon, 가나다라마바사 + 漢字 + English.`,
-        },
-        {
-            title: '多语混排-2（长词自动换行）',
-            text: `Thaiไทยทดลองร่วมกับ中文和English：กรุงเทพมหานครเชียงใหม่ภูเก็ตสุราษฎร์ธานี
-Arabicالعربيةاختبارمع中文English: القاهرةالرياضدبيأبودبيالدوحة
-EspañolFrançaisItalianoРусский日本語한국어中文EnglishLongMixedSequence_ABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890`,
-        },
-        {
-            title: '多语混排-3（标点/数字/符号换行）',
-            text: `1) 北京/Beijing - 2) 東京/Tokyo - 3) 서울/Seoul - 4) Москва/Moscow - 5) กรุงเทพ/Bangkok
-6) القاهرة/Cairo - 7) Madrid - 8) Roma - 9) Paris - 10) 深圳/Shenzhen
-符号测试：()[]{}<>«»“”‘’【】——···！？!?,.;: @#&*+=/%\\ | ~`,
-        },
-        {
-            title: '复杂专项-1（RTL + LTR + 数字）',
-            text: `Arabic RTL: مرحبا بالعالم ١٢٣٤٥ ، ثم English ABC 67890 ، 再接中文段落。
-Mixed order: Start-中文-العربية-English-日本語-한국어-End.
-Bidirectional check: السعر 99.50 USD，折扣20%，最终价￥568。`,
-        },
-        {
-            title: '复杂专项-2（组合字符/重音）',
-            text: `NFC/NFD: é é ñ ñ ü ü à à ç ç
-Français: élève déjà Noël façade rôle où très bientôt.
-Español: pingüino corazón acción niño jalapeño camión.`,
-        },
-        {
-            title: '复杂专项-3（全角/半角/兼容字符）',
-            text: `半角: ABCabc123()[]{}!?
-全角: ＡＢＣａｂｃ１２３（）［］｛｝！？
-日文混合: ｶﾀｶﾅ カタカナ ひらがな 漢字，韩文: ﾊﾝｸﾞﾙ 한글`,
-        },
-        {
-            title: '复杂专项-4（Emoji + ZWJ + 旗帜）',
-            text: `Emoji: 😀😃😄😁😆😅😂🤣😊😇
-ZWJ: 👨‍👩‍👧‍👦 👩‍💻 🧑‍🚀 🧑‍🔬 🧑‍🍳
-Flags: 🇨🇳 🇺🇸 🇯🇵 🇰🇷 🇹🇭 🇸🇦 🇪🇸 🇷🇺 🇮🇹 🇫🇷`,
-        },
-        {
-            title: '复杂专项-5（超长串/软断行）',
-            text: `LongToken: SuperLongMixedToken中文English日本語한국어ไทยالعربيةEspañolРусскийItalianoFrançais1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ
-SoftBreakHint: 中文\u200BEnglish\u200B日本語\u200B한국어\u200Bไทย\u200Bالعربية\u200BEspañol
-URL-like: https://example.com/中文/path/العربية/日本語/very-long-segment-for-wrap-testing`,
-        },
-    */
+    private readonly _cases: CaseItem[] = CUSTOM_CASES; 
 
     protected onEnable(): void {
         this._captureBaseSize();
