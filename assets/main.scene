@@ -468,7 +468,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 340,
-      "height": 250
+      "height": 150
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -864,7 +864,7 @@
     "enableDebugLog": true,
     "useTestAreaSize": true,
     "testAreaWidth": 340,
-    "testAreaHeight": 250,
+    "testAreaHeight": 150,
     "debugAutoCenterLabel": false,
     "debugDisableWidgetWhenCentering": true,
     "debugShowBorder": false,

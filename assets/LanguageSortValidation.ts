@@ -17,7 +17,6 @@ const CUSTOM_CASES: CaseItem[] = [
     { text: 'يرجى الضغط على دواسة الفرامل لبدء التشغيل' },
     { text: 'نظام التحكم بالسرعة في المسار يحاول التفعيل، يرجى الانتباه للتحكم بعجلة القيادة' },
     { text: 'عطل في زر وضع P، إذا كنت بحاجة إلى الركن، يرجى استخدام مفتاح EPB على الشاشة' },
-    { text: ',وفقًا لدرجة الحرارة الحالية، يُوصى بضبط ضغط الإطارات على 2.0 bar' },
     { text: 'อุณหภูมิของกล้องสูงเกินไป ระบบควบคุมความเร็วอัตโนมัติไม่สามารถใช้งานได้ชั่วคราว' },
     { text: 'กรุณาเชื่อมต่อ กุญแจบลูทธใหม่ผ่านแอปในโทรศัพท์' },
     { text: 'กรุณาทําการเรียนรู้ด้วยตนเองของมอเตอร์' },
@@ -658,32 +657,32 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         const hostLabel = this.targetLabel ?? this.getComponent(Label);
         const hostNode = hostLabel?.node;
         const hostParent = hostNode?.parent;
-        const hostTransform = hostNode?.getComponent(UITransform);
-        const parentTransform = hostParent?.getComponent(UITransform);
         const infoNode = infoLabel.node;
         const infoTransform = infoNode.getComponent(UITransform) ?? infoNode.addComponent(UITransform);
+        const infoWidget = infoNode.getComponent(Widget) ?? infoNode.addComponent(Widget);
 
         if (hostParent && infoNode.parent !== hostParent) {
             infoNode.parent = hostParent;
         }
 
-        const referenceNode = this.referenceImageSprite?.node?.isValid
-            ? this.referenceImageSprite.node
-            : null;
-        const referencePosition = referenceNode?.position;
-        const width = Math.max(
-            this.useTestAreaSize ? this.testAreaWidth : 0,
-            Math.round((parentTransform?.contentSize.width ?? hostTransform?.contentSize.width ?? 960) - 80),
-        );
-        const baseHeight = hostTransform?.contentSize.height ?? this.testAreaHeight;
-        const y = referencePosition?.y ?? ((hostNode?.position.y ?? 0) - baseHeight * 0.5 - 48);
-        const x = referencePosition?.x ?? (hostNode?.position.x ?? 0);
-
         infoNode.active = true;
         infoNode.layer = hostParent?.layer ?? infoNode.layer;
         infoTransform.setAnchorPoint(0.5, 0.5);
-        infoTransform.setContentSize(width, 40);
-        infoNode.setPosition(new Vec3(x, y, 0));
+        infoTransform.setContentSize(960, 32);
+        infoWidget.isAlignLeft = true;
+        infoWidget.isAlignRight = true;
+        infoWidget.isAlignBottom = true;
+        infoWidget.isAlignTop = false;
+        infoWidget.isAlignHorizontalCenter = false;
+        infoWidget.isAlignVerticalCenter = false;
+        infoWidget.left = 40;
+        infoWidget.right = 40;
+        infoWidget.bottom = 24;
+        infoWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+        infoWidget.updateAlignment();
+        if (hostParent) {
+            infoNode.setSiblingIndex(hostParent.children.length - 1);
+        }
 
         const infoIcuLabel = infoNode.getComponent(ICULabel);
         if (infoIcuLabel) {
@@ -692,12 +691,12 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
 
         infoLabel.useSystemFont = true;
         infoLabel.fontFamily = 'Arial';
-        infoLabel.fontSize = 20;
-        infoLabel.lineHeight = 28;
+        infoLabel.fontSize = 16;
+        infoLabel.lineHeight = 20;
         infoLabel.enableWrapText = false;
         infoLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
         infoLabel.verticalAlign = Label.VerticalAlign.CENTER;
-        infoLabel.overflow = Label.Overflow.SHRINK;
+        infoLabel.overflow = Label.Overflow.CLAMP;
         infoLabel.string = item.text;
     }
 
