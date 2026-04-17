@@ -17,6 +17,7 @@ const CUSTOM_CASES: CaseItem[] = [
     { text: 'يرجى الضغط على دواسة الفرامل لبدء التشغيل' },
     { text: 'نظام التحكم بالسرعة في المسار يحاول التفعيل، يرجى الانتباه للتحكم بعجلة القيادة' },
     { text: 'عطل في زر وضع P، إذا كنت بحاجة إلى الركن، يرجى استخدام مفتاح EPB على الشاشة' },
+    { text: 'لم يوضع ناقل الحركة في وضع القيادة الأمامية، مثبت السرعة مؤقتًا غير متاح' },
     { text: 'อุณหภูมิของกล้องสูงเกินไป ระบบควบคุมความเร็วอัตโนมัติไม่สามารถใช้งานได้ชั่วคราว' },
     { text: 'กรุณาเชื่อมต่อ กุญแจบลูทธใหม่ผ่านแอปในโทรศัพท์' },
     { text: 'กรุณาทําการเรียนรู้ด้วยตนเองของมอเตอร์' },
@@ -87,6 +88,9 @@ export class LanguageSortValidation extends Component {
     private _pauseButtonNode: Node | null = null;
     private _pauseButtonGraphics: Graphics | null = null;
     private _pauseButtonLabel: Label | null = null;
+    private _progressBadgeNode: Node | null = null;
+    private _progressBadgeGraphics: Graphics | null = null;
+    private _progressBadgeLabel: Label | null = null;
     private _previousButtonNode: Node | null = null;
     private _previousButtonGraphics: Graphics | null = null;
     private _previousButtonLabel: Label | null = null;
@@ -176,6 +180,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         this._applyDebugLayout();
         this._ensureIcuLabel();
         this._ensurePauseButton();
+        this._ensureProgressBadge();
         this._hideReferenceSprite();
         this._showCurrentCase();
         this._restartAutoPlay();
@@ -185,6 +190,9 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         this.unschedule(this._showNextCase);
         if (this._pauseButtonNode) {
             this._pauseButtonNode.active = false;
+        }
+        if (this._progressBadgeNode) {
+            this._progressBadgeNode.active = false;
         }
         if (this._previousButtonNode) {
             this._previousButtonNode.active = false;
@@ -196,6 +204,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
 
     protected onDestroy(): void {
         this._destroyOverlayButton(this._pauseButtonNode, this._onPauseButtonPressed);
+        this._destroyOverlayNode(this._progressBadgeNode);
         this._destroyOverlayButton(this._previousButtonNode, this._onPreviousButtonPressed);
         this._destroyOverlayButton(this._nextButtonNode, this._onNextButtonPressed);
     }
@@ -247,6 +256,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         }
 
         this._updateDebugBorder(label);
+        this._refreshProgressBadge();
         this._updateReferencePanel(item);
         this._logCurrentState(item);
     }
@@ -427,6 +437,75 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         this._refreshPauseButton();
     }
 
+    private _ensureProgressBadge(): void {
+        const hostLabel = this.targetLabel ?? this.getComponent(Label);
+        const hostParent = hostLabel?.node.parent ?? this.node.parent;
+        if (!hostParent) {
+            return;
+        }
+
+        let node = this._progressBadgeNode;
+        if (!node || !node.isValid) {
+            node = new Node('ProgressBadge');
+            node.parent = hostParent;
+            node.layer = hostParent.layer;
+            this._progressBadgeNode = node;
+        }
+
+        const transform = node.getComponent(UITransform) ?? node.addComponent(UITransform);
+        transform.setContentSize(120, 40);
+
+        const widget = node.getComponent(Widget) ?? node.addComponent(Widget);
+        widget.isAlignTop = true;
+        widget.isAlignHorizontalCenter = true;
+        widget.isAlignLeft = false;
+        widget.isAlignRight = false;
+        widget.isAlignBottom = false;
+        widget.top = 20;
+        widget.horizontalCenter = 0;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
+        const graphics = node.getComponent(Graphics) ?? node.addComponent(Graphics);
+        this._progressBadgeGraphics = graphics;
+
+        let textNode = node.getChildByName('ProgressBadgeText');
+        if (!textNode) {
+            textNode = new Node('ProgressBadgeText');
+            textNode.parent = node;
+        }
+        textNode.layer = node.layer;
+
+        const textTransform = textNode.getComponent(UITransform) ?? textNode.addComponent(UITransform);
+        textTransform.setContentSize(transform.contentSize.width, transform.contentSize.height);
+
+        const textWidget = textNode.getComponent(Widget) ?? textNode.addComponent(Widget);
+        textWidget.isAlignLeft = true;
+        textWidget.isAlignRight = true;
+        textWidget.isAlignTop = true;
+        textWidget.isAlignBottom = true;
+        textWidget.left = 0;
+        textWidget.right = 0;
+        textWidget.top = 0;
+        textWidget.bottom = 0;
+        textWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
+        const label = textNode.getComponent(Label) ?? textNode.addComponent(Label);
+        label.useSystemFont = true;
+        label.fontFamily = 'Arial';
+        label.fontSize = 18;
+        label.lineHeight = 22;
+        label.enableWrapText = false;
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+        label.overflow = Label.Overflow.SHRINK;
+        this._progressBadgeLabel = label;
+
+        node.active = true;
+        widget.updateAlignment();
+        textWidget.updateAlignment();
+        this._refreshProgressBadge();
+    }
+
     private _onPauseButtonPressed(): void {
         this._isPaused = !this._isPaused;
         this._restartAutoPlay();
@@ -484,6 +563,37 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         graphics.fill();
         graphics.stroke();
         this._refreshNavigationButtons();
+    }
+
+    private _refreshProgressBadge(): void {
+        const node = this._progressBadgeNode;
+        const graphics = this._progressBadgeGraphics;
+        const label = this._progressBadgeLabel;
+        if (!node || !graphics || !label || this._cases.length === 0) {
+            return;
+        }
+
+        node.active = true;
+        label.string = `${this._currentIndex + 1} / ${this._cases.length}`;
+        label.color = new Color(255, 255, 255, 255);
+
+        const transform = node.getComponent(UITransform);
+        if (!transform) {
+            return;
+        }
+
+        const width = transform.contentSize.width;
+        const height = transform.contentSize.height;
+        const startX = -width * transform.anchorX;
+        const startY = -height * transform.anchorY;
+
+        graphics.clear();
+        graphics.fillColor = new Color(33, 33, 33, 200);
+        graphics.strokeColor = new Color(255, 255, 255, 160);
+        graphics.lineWidth = 2;
+        graphics.roundRect(startX, startY, width, height, 10);
+        graphics.fill();
+        graphics.stroke();
     }
 
     private _ensureNavigationButtons(hostParent: Node): void {
@@ -644,6 +754,14 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
 
         buttonNode.off(Node.EventType.TOUCH_END, handler, this);
         buttonNode.destroy();
+    }
+
+    private _destroyOverlayNode(node: Node | null): void {
+        if (!node?.isValid) {
+            return;
+        }
+
+        node.destroy();
     }
 
     private _updateReferencePanel(item: CaseItem): void {
