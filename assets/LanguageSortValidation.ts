@@ -177,14 +177,7 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
         this._applyDebugLayout();
         this._ensureIcuLabel();
         this._ensurePauseButton();
-        this._ensureReferenceSpriteNode();
-        this._tryAutoLoadReferenceFrames();
-        this.scheduleOnce(() => {
-            if (this.referenceImageFrames.length === 0 && this._referenceFrameByCase.length === 0) {
-                this._refLog('retry auto-load once after 1s');
-                this._tryAutoLoadReferenceFrames();
-            }
-        }, 1);
+        this._hideReferenceSprite();
         this._showCurrentCase();
         this._restartAutoPlay();
     }
@@ -655,32 +648,57 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
     }
 
     private _updateReferencePanel(item: CaseItem): void {
-        if (this.referenceInfoLabel) {
-            const defaultRef = '参考站点: https://www.unicode.org/charts/  (可为当前用例配置专属截图)';
-            this.referenceInfoLabel.string = item.reference ?? defaultRef;
-        }
+        this._hideReferenceSprite();
 
-        if (!this.referenceImageSprite) {
+        const infoLabel = this._ensureReferenceTextLabel();
+        if (!infoLabel) {
             return;
         }
 
-        let frame: SpriteFrame | null = null;
-        if (this._referenceFrameByCase.length > this._currentIndex) {
-            frame = this._referenceFrameByCase[this._currentIndex];
-        }
-        if (!frame) {
-            frame = this.referenceImageFrames[this._currentIndex] ?? null;
-        }
-        this.referenceImageSprite.spriteFrame = frame;
-        this.referenceImageSprite.node.active = !!frame;
+        const hostLabel = this.targetLabel ?? this.getComponent(Label);
+        const hostNode = hostLabel?.node;
+        const hostParent = hostNode?.parent;
+        const hostTransform = hostNode?.getComponent(UITransform);
+        const parentTransform = hostParent?.getComponent(UITransform);
+        const infoNode = infoLabel.node;
+        const infoTransform = infoNode.getComponent(UITransform) ?? infoNode.addComponent(UITransform);
 
-        if (!frame && this.warnWhenReferenceMissing) {
-            const need = this._cases.length;
-            const loaded = this.referenceImageFrames.length;
-            console.warn(
-                `[LanguageSortValidation] missing reference image for case index=${this._currentIndex + 1}. loaded=${loaded}, totalCases=${need}`,
-            );
+        if (hostParent && infoNode.parent !== hostParent) {
+            infoNode.parent = hostParent;
         }
+
+        const referenceNode = this.referenceImageSprite?.node?.isValid
+            ? this.referenceImageSprite.node
+            : null;
+        const referencePosition = referenceNode?.position;
+        const width = Math.max(
+            this.useTestAreaSize ? this.testAreaWidth : 0,
+            Math.round((parentTransform?.contentSize.width ?? hostTransform?.contentSize.width ?? 960) - 80),
+        );
+        const baseHeight = hostTransform?.contentSize.height ?? this.testAreaHeight;
+        const y = referencePosition?.y ?? ((hostNode?.position.y ?? 0) - baseHeight * 0.5 - 48);
+        const x = referencePosition?.x ?? (hostNode?.position.x ?? 0);
+
+        infoNode.active = true;
+        infoNode.layer = hostParent?.layer ?? infoNode.layer;
+        infoTransform.setAnchorPoint(0.5, 0.5);
+        infoTransform.setContentSize(width, 40);
+        infoNode.setPosition(new Vec3(x, y, 0));
+
+        const infoIcuLabel = infoNode.getComponent(ICULabel);
+        if (infoIcuLabel) {
+            infoIcuLabel.enabled = false;
+        }
+
+        infoLabel.useSystemFont = true;
+        infoLabel.fontFamily = 'Arial';
+        infoLabel.fontSize = 20;
+        infoLabel.lineHeight = 28;
+        infoLabel.enableWrapText = false;
+        infoLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
+        infoLabel.verticalAlign = Label.VerticalAlign.CENTER;
+        infoLabel.overflow = Label.Overflow.SHRINK;
+        infoLabel.string = item.text;
     }
 
     private _ensureReferenceSpriteNode(): void {
@@ -831,6 +849,34 @@ URL-like: https://example.com/中文/path/العربية/日本語/very-long-seg
             return;
         }
         console.info(`[LanguageSortValidation][Ref] ${msg}`);
+    }
+
+    private _ensureReferenceTextLabel(): Label | null {
+        if (this.referenceInfoLabel?.node?.isValid) {
+            return this.referenceInfoLabel;
+        }
+
+        const hostLabel = this.targetLabel ?? this.getComponent(Label);
+        const hostParent = hostLabel?.node.parent ?? this.node.parent;
+        if (!hostParent) {
+            return null;
+        }
+
+        const infoNode = new Node('OriginalTextLabel');
+        infoNode.parent = hostParent;
+        infoNode.layer = hostParent.layer;
+        infoNode.addComponent(UITransform).setContentSize(960, 40);
+        this.referenceInfoLabel = infoNode.addComponent(Label);
+        return this.referenceInfoLabel;
+    }
+
+    private _hideReferenceSprite(): void {
+        if (!this.referenceImageSprite?.node?.isValid) {
+            return;
+        }
+
+        this.referenceImageSprite.spriteFrame = null;
+        this.referenceImageSprite.node.active = false;
     }
 
     private _applyDebugLayout(): void {
