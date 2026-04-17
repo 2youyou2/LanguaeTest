@@ -54,7 +54,12 @@ async function main() {
         Locale,
     } = await import('icu');
 
-    const contentLocale = locale ? Locale.fromString(locale) : null;
+    let contentLocale;
+    try {
+        contentLocale = locale ? Locale.fromString(locale) : Locale.unknown();
+    } catch {
+        contentLocale = Locale.unknown();
+    }
     const lineBreaks = collectBreakPoints(
         LineSegmenter.autoWithOptions(contentLocale, {
             strictness: LineBreakStrictness.Normal,
