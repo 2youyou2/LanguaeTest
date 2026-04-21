@@ -386,7 +386,7 @@ export class LanguageSortValidation extends Component {
         const label = textNode.getComponent(Label) ?? textNode.addComponent(Label);
         label.useSystemFont = true;
         label.fontFamily = 'Arial';
-        label.string = '暂停';
+        label.string = 'pause';
         label.fontSize = 20;
         label.lineHeight = 24;
         label.enableWrapText = false;
@@ -493,12 +493,8 @@ export class LanguageSortValidation extends Component {
 
     private _refreshPauseButton(): void {
         if (this._pauseButtonLabel) {
-            this._pauseButtonLabel.string = this._isPaused ? '继续' : '暂停';
+            this._pauseButtonLabel.string = this._isPaused ? 'resume' : 'pause';
             this._pauseButtonLabel.color = new Color(255, 255, 255, 255);
-        }
-
-        if (this._pauseButtonLabel) {
-            this._pauseButtonLabel.string = this._isPaused ? '\u7EE7\u7EED' : '\u6682\u505C';
         }
 
         const graphics = this._pauseButtonGraphics;
@@ -567,7 +563,7 @@ export class LanguageSortValidation extends Component {
             {
                 name: 'PreviousButton',
                 textNodeName: 'PreviousButtonText',
-                labelText: '\u4E0A\u4E00\u4E2A',
+                labelText: 'previous',
                 right: 252,
                 width: 108,
                 onPressed: this._onPreviousButtonPressed,
@@ -583,7 +579,7 @@ export class LanguageSortValidation extends Component {
             {
                 name: 'NextButton',
                 textNodeName: 'NextButtonText',
-                labelText: '\u4E0B\u4E00\u4E2A',
+                labelText: 'next',
                 right: 136,
                 width: 108,
                 onPressed: this._onNextButtonPressed,
@@ -736,49 +732,52 @@ export class LanguageSortValidation extends Component {
             return;
         }
 
-        const hostLabel = this.targetLabel ?? this.getComponent(Label);
-        const hostNode = hostLabel?.node;
-        const hostParent = hostNode?.parent;
-        const infoNode = infoLabel.node;
-        const infoTransform = infoNode.getComponent(UITransform) ?? infoNode.addComponent(UITransform);
-        const infoWidget = infoNode.getComponent(Widget) ?? infoNode.addComponent(Widget);
+        // const hostLabel = this.targetLabel ?? this.getComponent(Label);
+        // const hostNode = hostLabel?.node;
+        // const hostParent = hostNode?.parent;
+        // const infoNode = infoLabel.node;
+        // const infoTransform = infoNode.getComponent(UITransform) ?? infoNode.addComponent(UITransform);
+        // const infoWidget = infoNode.getComponent(Widget) ?? infoNode.addComponent(Widget);
 
-        if (hostParent && infoNode.parent !== hostParent) {
-            infoNode.parent = hostParent;
-        }
+        // if (hostParent && infoNode.parent !== hostParent) {
+        //     infoNode.parent = hostParent;
+        // }
 
-        infoNode.active = true;
-        infoNode.layer = hostParent?.layer ?? infoNode.layer;
-        infoTransform.setAnchorPoint(0.5, 0.5);
-        infoTransform.setContentSize(960, 32);
-        infoWidget.isAlignLeft = true;
-        infoWidget.isAlignRight = true;
-        infoWidget.isAlignBottom = true;
-        infoWidget.isAlignTop = false;
-        infoWidget.isAlignHorizontalCenter = false;
-        infoWidget.isAlignVerticalCenter = false;
-        infoWidget.left = 40;
-        infoWidget.right = 40;
-        infoWidget.bottom = 24;
-        infoWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
-        infoWidget.updateAlignment();
-        if (hostParent) {
-            infoNode.setSiblingIndex(hostParent.children.length - 1);
-        }
+        // infoNode.active = true;
+        // infoNode.layer = hostParent?.layer ?? infoNode.layer;
+        // infoTransform.setAnchorPoint(0.5, 0.5);
+        // infoTransform.setContentSize(960, 32);
+        // infoWidget.isAlignLeft = true;
+        // infoWidget.isAlignRight = true;
+        // infoWidget.isAlignBottom = true;
+        // infoWidget.isAlignTop = false;
+        // infoWidget.isAlignHorizontalCenter = false;
+        // infoWidget.isAlignVerticalCenter = false;
+        // infoWidget.left = 40;
+        // infoWidget.right = 40;
+        // infoWidget.bottom = 24;
+        // infoWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+        // infoWidget.updateAlignment();
+        // if (hostParent) {
+        //     infoNode.setSiblingIndex(hostParent.children.length - 1);
+        // }
 
-        const infoIcuLabel = infoNode.getComponent(ICULabel);
-        if (infoIcuLabel) {
-            infoIcuLabel.enabled = false;
-        }
+        // const infoIcuLabel = infoNode.getComponent(ICULabel);
+        // if (infoIcuLabel) {
+        //     infoIcuLabel.enabled = false;
+        // }
 
-        infoLabel.useSystemFont = true;
-        infoLabel.fontFamily = 'Arial';
-        infoLabel.fontSize = 16;
-        infoLabel.lineHeight = 20;
-        infoLabel.enableWrapText = false;
-        infoLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
-        infoLabel.verticalAlign = Label.VerticalAlign.CENTER;
-        infoLabel.overflow = Label.Overflow.CLAMP;
+        // infoLabel.useSystemFont = true;
+        // if (this.targetLabel) {
+        //     infoLabel.font = this.targetLabel.font
+        // }
+        // infoLabel.fontFamily = 'Arial';
+        // infoLabel.fontSize = 22;
+        // infoLabel.lineHeight = 28;
+        // infoLabel.enableWrapText = false;
+        // infoLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
+        // infoLabel.verticalAlign = Label.VerticalAlign.CENTER;
+        // infoLabel.overflow = Label.Overflow.CLAMP;
         infoLabel.string = item.text;
     }
 
