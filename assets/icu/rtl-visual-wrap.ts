@@ -36,7 +36,7 @@ async function collectIcuBreakData(text: string, locale: string | null) {
             return await editorMessageApi.request('icu-main', 'get-break-points', {
                 text,
                 locale,
-            }) as { lineBreaks: number[], graphemeBreaks: number[] };
+            }) as { lineBreaks: number[] };
         } catch (error: any) {
             throw new Error(
                 `[rtl-visual-wrap] 无法从 "icu-main" 扩展请求 ICU 断点数据: ${error?.message || error}`
@@ -147,6 +147,7 @@ function splitOversizedWords(
     return words;
 }
 
+const useBI = true
 
 /**
  * 核心折行逻辑：结合 ICU 断点和渲染引擎测量的 RTL 折行算法
@@ -176,7 +177,7 @@ export async function wrapRtlTextWithIcu(
 
     const breakData = await collectIcuBreakData(text, locale);
     const lineBreaks = normalizeBreakPoints(breakData?.lineBreaks, text.length);
-    const graphemeBreaks = normalizeBreakPoints(breakData?.graphemeBreaks, text.length);
+    const graphemeBreaks = [];//normalizeBreakPoints(breakData?.graphemeBreaks, text.length);
 
     // lineBreaks:
     //   语言学上合法的断行位置。
@@ -196,19 +197,31 @@ export async function wrapRtlTextWithIcu(
 
     function lineToRTLText(line: string[]) {
         line.push('\u200F');
+        // let newLine = []
+        // line.forEach(word => {
+        //     if (word.endsWith(' ')) {
+        //         newLine.push(' ', word.trim())
+        //         return
+        //         // return ' ' + word.trim()
+        //     }
+        //     newLine.push(word)
+        //     return word
+        // })
         let text = line.join('')
+
         return text.trim()
     }
 
     const words = splitOversizedWords(text, lineBreaks, graphemeBreaks, maxWidth, measureWidth)
 
+
     // debugger
 
     const isRTL = isRTLText(text);
     const isLTR = isLTRText(text);
-    if (isRTL) {
+    if (isRTL && useBI) {
         // rtl 和 ltr 混排
-        if (isLTR) {
+        // if (isLTR) {
             // 分离 rtl 和 ltr text
             let texts = []
 
@@ -218,8 +231,17 @@ export async function wrapRtlTextWithIcu(
                 const isLTR = isLTRText(text);
 
                 if (isLTR !== lastIsLTR) {
+                    if (isLTR) {
+                        text = text.trim().replace(/([a-zA-Z]+)(.*)/, `$2$1`);
+                        text = ' ' + text.trim() + ' '
+                    }
+
                     lineWords = []
                     texts.push(lineWords)
+                }
+
+                if (!isLTR) {
+                    text = text.replace(/([،,])/g, '\u200F' + '$1' + '\u200F')
                 }
 
                 lineWords.push(text);
@@ -234,7 +256,7 @@ export async function wrapRtlTextWithIcu(
 
             let lastPos = 0;
 
-            for (let i = texts.length - 1; i >= 0; i--) {
+            for (let i = 0; i < texts.length; i++) {
                 let _text = texts[i]
                 for (let j = 0; j < _text.length; j++) {
                     if (measureWidth(lineToRTLText(line.concat()) + _text[j]) <= maxWidth) {
@@ -260,25 +282,25 @@ export async function wrapRtlTextWithIcu(
                 lines.push(lineToRTLText(line));
             }
 
-        }
-        // rtl
-        else {
-            let line = []
+        // }
+        // // rtl
+        // else {
+        //     let line = []
 
-            for (let i = 0; i < words.length; i++) {
-                if (measureWidth(lineToRTLText(line.concat()) + words[i]) <= maxWidth) {
-                    line.push(words[i])
-                }
-                else {
-                    lines.push(lineToRTLText(line))
-                    line = [words[i]]
-                }
-            }
+        //     for (let i = 0; i < words.length; i++) {
+        //         if (measureWidth(lineToRTLText(line.concat()) + words[i]) <= maxWidth) {
+        //             line.push(words[i])
+        //         }
+        //         else {
+        //             lines.push(lineToRTLText(line))
+        //             line = [words[i]]
+        //         }
+        //     }
 
-            if (line) {
-                lines.push(lineToRTLText(line));
-            }
-        }
+        //     if (line) {
+        //         lines.push(lineToRTLText(line));
+        //     }
+        // }
 
         return lines;
     }
