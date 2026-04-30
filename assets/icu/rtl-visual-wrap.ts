@@ -147,7 +147,7 @@ function splitOversizedWords(
     return words;
 }
 
-const useBI = true
+const useBI = !NATIVE;//false
 
 /**
  * 核心折行逻辑：结合 ICU 断点和渲染引擎测量的 RTL 折行算法
@@ -209,7 +209,7 @@ export async function wrapRtlTextWithIcu(
         // })
         let text = line.join('')
 
-        return text.trim()
+        return text.trim().replace(/ +/g, ' ')
     }
 
     const words = splitOversizedWords(text, lineBreaks, graphemeBreaks, maxWidth, measureWidth)
@@ -249,6 +249,8 @@ export async function wrapRtlTextWithIcu(
                 lastIsLTR = isLTR
             });
 
+            // texts = [words]
+
             // console.log(texts)
 
             let line = []
@@ -269,7 +271,7 @@ export async function wrapRtlTextWithIcu(
                             line.splice(lastPos++, 0, _text[j])
                         }
                     }
-                    else {
+                    else if (line.length){
                         lines.push(lineToRTLText(line))
                         lastPos = 0
                         j--;
@@ -337,6 +339,8 @@ export async function wrapRtlTextToString(
         return '';
     }
 
+    // console.log(`输入：`, text.split(''))
+
     const paragraphs = text.replace(/\r\n/g, '\n').split('\n');
     const wrappedParagraphs = await Promise.all(paragraphs.map(async (paragraph) => {
         if (!paragraph) {
@@ -346,6 +350,11 @@ export async function wrapRtlTextToString(
         const lines = await wrapRtlTextWithIcu(paragraph, options);
         return lines.join('\n');
     }));
+
+    // console.log('输出：')
+    // wrappedParagraphs.forEach(line => {
+    //     console.log(line.split(''))
+    // })
 
     return wrappedParagraphs.join('\n');
 }
